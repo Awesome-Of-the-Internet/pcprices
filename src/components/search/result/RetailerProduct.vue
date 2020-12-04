@@ -4,9 +4,17 @@
 
     <div class="flex flex-col justify-around w-full">
       <div>
-        <p class="text-sm uppercase opacity-50">{{ product.brand }}</p>
-        <a class="vertical-truncate" :href="product.href" target="_blank">
-          {{ product.name }}
+        <p class="text-sm uppercase opacity-50">{{ product.name.brand }}</p>
+        <a
+          class="vertical-truncate"
+          :href="product.href"
+          target="_blank"
+          @click="trackOutbound"
+        >
+          {{
+            (product.name.brand ? product.name.part : product.name.full) ||
+            product.name
+          }}
         </a>
       </div>
       <div class="flex items-center justify-between mt-3">
@@ -96,6 +104,9 @@ export default {
     },
     toggleProduct() {
       this.inCurrentBuild ? this.removeFromBuild() : this.addToBuild();
+    },
+    trackOutbound() {
+      window.sa_event(this.product.retailerName);
     },
   },
 };

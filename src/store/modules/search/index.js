@@ -3,10 +3,6 @@ import searchStores from "@/api/search";
 const state = {
   query: "",
   category: "",
-  filters: {
-    strict: true,
-    sort: "default",
-  },
 };
 
 const mutations = {
@@ -16,35 +12,45 @@ const mutations = {
   setCategory(state, value) {
     state.category = state.category !== value ? value : "";
   },
-  setFilters(state, value) {
-    state.filters = value;
-  },
 };
+
+let abortController = null;
 
 const actions = {
   search({ commit, state, getters }) {
-    commit("ui/setStatus", "loading", { root: true });
+    if (!state.query && !state.category) return;
+
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+    let isAborted = false;
+
+    setTimeout(() => {
+      commit("ui/setStatus", "loading", { root: true });
+    }, 1);
+
     searchStores(
       state.query,
       state.category,
+      abortController.signal,
       (result) => {
-        if (result && result.products.length)
+        if (result && result.products && result.products.length)
           commit("result/addResult", result);
       },
       () => {
         commit("result/resetResults");
       },
-      console.error,
-      (isAborted) => {
-        commit(
-          "ui/setStatus",
-          getters["result/retailers"].length || isAborted
-            ? "default"
-            : "noResult",
-          {
+      (e) => {
+        isAborted = e.name === "AbortError";
+      },
+      () => {
+        if (getters["result/retailers"].length && !isAborted)
+          commit("ui/setStatus", "default", {
             root: true,
-          }
-        );
+          });
+        else if (!getters["result/retailers"].length)
+          commit("ui/setStatus", "noResult", {
+            root: true,
+          });
       }
     );
   },
@@ -53,7 +59,6 @@ const actions = {
 const getters = {
   query: ({ query }) => query,
   category: ({ category }) => category,
-  filters: ({ filters }) => filters,
 };
 
 import result from "./result";
